@@ -29,21 +29,19 @@ enum {
     STATE_TEAM_SELECT
 };
 
-// Configuration des obstacles (Commun au multi et solo)
+// Obstacles (client, pour rendu + solo)
 SDL_Rect obstacles[] = {
-    {160, 100, 50, 140},  // Pilier Gauche
-    {580, 340, 50, 140},  // Pilier Droit
-    {370, 260, 70, 70},   // Caisse Centrale Tactique
-    {120, 430, 90, 50},   // Bunker Bas-Gauche
-    {580, 90, 90, 50},    // Bunker Haut-Droit
-    {385, 90, 50, 50}     // Petite caisse Top
+    {160, 100, 50, 140},
+    {580, 340, 50, 140},
+    {370, 260, 70, 70},
+    {120, 430, 90, 50},
+    {580, 90, 90, 50},
+    {385, 90, 50, 50}
 };
 int num_obstacles = sizeof(obstacles) / sizeof(obstacles[0]);
 
-// Mode vidéo courant
 int video_mode = VIDEO_WINDOWED;
 
-// Structure pour le Mode Solo (Kill The Crows style)
 typedef struct {
     float x, y;
     int active;
@@ -58,7 +56,7 @@ typedef struct {
     int from_bot;
 } SoloBullet;
 
-// --- MOTEUR DE TEXTE VECTORIEL ---
+// --- Texte vectoriel ---
 void draw_char(SDL_Renderer* r, char c, int x, int y) {
     int w = 14, h = 22;
     int x0 = x, x1 = x + w;
@@ -214,12 +212,12 @@ void draw_char(SDL_Renderer* r, char c, int x, int y) {
 void draw_string(SDL_Renderer* r, const char* str, int x, int y) {
     while(*str) {
         if (*str != ' ') draw_char(r, *str, x, y);
-        x += 22; 
+        x += 22;
         str++;
     }
 }
 
-// --- SYSTÈME DE COLLISION SOLO ---
+// Collision solo
 int check_obstacle_collision(int x, int y, int size) {
     SDL_Rect p_rect = {x, y, size, size};
     for(int o=0; o<num_obstacles; o++) {
@@ -228,7 +226,7 @@ int check_obstacle_collision(int x, int y, int size) {
     return 0;
 }
 
-// --- RAYCASTING SOLO ---
+// Raycast solo
 int check_line_of_sight(int x1, int y1, int x2, int y2) {
     int steps = 25;
     for (int i = 1; i < steps; i++) {
@@ -243,6 +241,27 @@ int check_line_of_sight(int x1, int y1, int x2, int y2) {
         }
     }
     return 1;
+}
+
+void apply_video_mode(SDL_Window* window) {
+    if (video_mode == VIDEO_WINDOWED) {
+        SDL_SetWindowFullscreen(window, 0);
+        SDL_SetWindowBordered(window, SDL_TRUE);
+        SDL_SetWindowSize(window, WINDOW_WIDTH, WINDOW_HEIGHT);
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    } else if (video_mode == VIDEO_BORDERLESS) {
+        SDL_DisplayMode dm;
+        SDL_GetCurrentDisplayMode(0, &dm);
+        SDL_SetWindowBordered(window, SDL_FALSE);
+        SDL_SetWindowSize(window, dm.w, dm.h);
+        SDL_SetWindowPosition(window, 0, 0);
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    } else if (video_mode == VIDEO_FULLSCREEN) {
+        SDL_DisplayMode dm;
+        SDL_GetCurrentDisplayMode(0, &dm);
+        SDL_SetWindowBordered(window, SDL_TRUE);
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -260,7 +279,6 @@ int main(int argc, char* argv[]) {
     int running = 1, appState = STATE_MAIN_MENU, menuSelected = 0;
     char server_ip[64] = "";
 
-    // Étoiles de fond
     int starX[80], starY[80];
     srand((unsigned int)time(NULL));
     for(int i=0; i<80; i++) {
@@ -268,7 +286,6 @@ int main(int argc, char* argv[]) {
         starY[i] = rand() % WINDOW_HEIGHT;
     }
 
-    // Socket Réseau (Multi)
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
@@ -280,9 +297,9 @@ int main(int argc, char* argv[]) {
     fcntl(sock, F_SETFL, O_NONBLOCK);
 #endif
 
-    GameState gameState; memset(&gameState, 0, sizeof(GameState));
+    GameState gameState;
+    memset(&gameState, 0, sizeof(GameState));
 
-    // Variables d'état du Mode Solo
     float solo_px = 100, solo_py = 300;
     float last_dx = 1.0f, last_dy = 0.0f;
     int solo_kills = 0, player_dead = 0;
@@ -367,12 +384,7 @@ int main(int argc, char* argv[]) {
                         else if (event.key.keysym.sym == SDLK_DOWN)
                             video_mode = (video_mode + 1) % 3;
                         else if (event.key.keysym.sym == SDLK_RETURN) {
-                            if (video_mode == VIDEO_WINDOWED)
-                                SDL_SetWindowFullscreen(window, 0);
-                            else if (video_mode == VIDEO_BORDERLESS)
-                                SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-                            else if (video_mode == VIDEO_FULLSCREEN)
-                                SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+                            apply_video_mode(window);
                         }
                     }
                     if (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_RETURN)
@@ -400,7 +412,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // --- ARRIÈRE-PLAN ---
         SDL_SetRenderDrawColor(renderer, 8, 10, 18, 255);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, 180, 180, 255, 120);
@@ -415,7 +426,6 @@ int main(int argc, char* argv[]) {
         for(int y = 0; y < WINDOW_HEIGHT; y += 60)
             SDL_RenderDrawLine(renderer, 0, y, WINDOW_WIDTH, y);
 
-        // --- MENU PRINCIPAL ---
         if (appState == STATE_MAIN_MENU) {
             SDL_SetWindowTitle(window, "LAN Blaster Tactical | MENU");
             SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
@@ -435,7 +445,6 @@ int main(int argc, char* argv[]) {
                 draw_string(renderer, choices[i], WINDOW_WIDTH/2 - offsets[i], 230 + i*50);
             }
         }
-        // --- SAISIE IP ---
         else if (appState == STATE_IP_MENU) {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             draw_string(renderer, "ENTREZ L IP DU SERVEUR", WINDOW_WIDTH/2 - 242, 140);
@@ -449,7 +458,6 @@ int main(int argc, char* argv[]) {
                     (WINDOW_WIDTH / 2) - (int)(strlen(server_ip)*22)/2,
                     (WINDOW_HEIGHT / 2) - 11);
         }
-        // --- SELECTION EQUIPE ---
         else if (appState == STATE_TEAM_SELECT) {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             draw_string(renderer, "CHOISIS TON EQUIPE", WINDOW_WIDTH/2 - 220, 140);
@@ -460,7 +468,6 @@ int main(int argc, char* argv[]) {
             SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
             draw_string(renderer, "ECHAP - RETOUR", WINDOW_WIDTH/2 - 150, 360);
         }
-        // --- TUTORIEL ---
         else if (appState == STATE_TUTORIAL) {
             SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
             draw_string(renderer, "CONSIGNES TACTIQUES", WINDOW_WIDTH/2 - 209, 60);
@@ -473,7 +480,6 @@ int main(int argc, char* argv[]) {
             SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
             draw_string(renderer, "RETOUR : ENTREE OU ECHAP", WINDOW_WIDTH/2 - 264, 490);
         }
-        // --- PARAMETRES ---
         else if (appState == STATE_SETTINGS) {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
             draw_string(renderer, "CONFIG COMPETITIVE", WINDOW_WIDTH/2 - 198, 80);
@@ -496,7 +502,6 @@ int main(int argc, char* argv[]) {
             draw_string(renderer, "RETOUR : ENTREE / ECHAP", WINDOW_WIDTH/2 - 220, 480);
         }
 
-        // --- DESSIN DES BLOCS/CAISSES ---
         if (appState == STATE_GAME || appState == STATE_SOLO_GAME) {
             for(int o=0; o<num_obstacles; o++) {
                 SDL_SetRenderDrawColor(renderer, 25, 28, 42, 255);
@@ -510,7 +515,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // --- MODE MULTIJOUEUR ---
         if (appState == STATE_GAME) {
             const Uint8* keys = SDL_GetKeyboardState(NULL);
             InputPacket input; memset(&input, 0, sizeof(input));
@@ -535,7 +539,6 @@ int main(int argc, char* argv[]) {
                 gameState = latestState;
             }
 
-            // Rendu des joueurs + balles + HUD
             int localPlayers = 0;
             for(int i=0; i<MAX_PLAYERS; i++) {
                 if(!gameState.players[i].connected) continue;
@@ -561,12 +564,20 @@ int main(int argc, char* argv[]) {
             }
 
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            draw_string(renderer, gameState.game_active ?
-                        "MATCH EN COURS" : "EN ATTENTE DES JOUEURS",
-                        20, 20);
-        }
+            char hud[128];
+            sprintf(hud, "T1:%d  T2:%d", gameState.score_team1, gameState.score_team2);
+            draw_string(renderer, hud, 20, 20);
 
-        // --- MODE SOLO ---
+            if (gameState.game_active == 0) {
+                draw_string(renderer, "EN ATTENTE DES JOUEURS", 20, 60);
+            } else if (gameState.game_active == 1) {
+                draw_string(renderer, "MATCH EN COURS", 20, 60);
+            } else if (gameState.game_active == 2) {
+                const char* msg = (gameState.score_team1 >= 6) ?
+                    "VICTOIRE EQUIPE 1" : "VICTOIRE EQUIPE 2";
+                draw_string(renderer, msg, WINDOW_WIDTH/2 - 176, WINDOW_HEIGHT/2 - 11);
+            }
+        }
         else if (appState == STATE_SOLO_GAME) {
             const Uint8* keys = SDL_GetKeyboardState(NULL);
             float move_x = 0, move_y = 0;

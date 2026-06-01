@@ -34,10 +34,12 @@ typedef struct {
     Bullet bullet;
 } Player;
 
-// En multijoueur, on retire le Boss bot. On gère juste l'état de la partie.
 typedef struct {
     Player players[MAX_PLAYERS];
-    int game_active; // 0: Écran de choix d'équipe/Salon, 1: En Jeu
+    int game_active;     // 0: Salon / sélection, 1: Match en cours, 2: Match terminé
+    int score_team1;
+    int score_team2;
+    int round_active;    // 0: entre manches, 1: manche en cours
 } GameState;
 
 #endif
