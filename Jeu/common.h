@@ -14,21 +14,18 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <sys/select.h>
 #include <fcntl.h>
 #endif
 
 #define PORT 5000
-
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
 #define PLAYER_SIZE 40
-#define PLAYER_SPEED 6
-#define BULLET_SPEED 14
+#define PLAYER_SPEED 9   // Boosté (était 6)
+#define BULLET_SPEED 22  // Boosté (était 14)
 #define MAX_PLAYERS 4
 
-// Force l'alignement memoire strict a 1 octet pour eviter les bugs de desynchronisation reseau
 #pragma pack(push, 1)
 
 typedef struct {
@@ -58,6 +55,7 @@ typedef struct {
     int x;
     int y;
     int hp;
+    int dirY; // Nouvelle variable pour animer le boss
 } Enemy;
 
 typedef struct {
