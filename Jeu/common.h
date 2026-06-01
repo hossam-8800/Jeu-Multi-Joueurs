@@ -22,8 +22,8 @@
 #define WINDOW_HEIGHT 600
 
 #define PLAYER_SIZE 40
-#define PLAYER_SPEED 9   // Boosté (était 6)
-#define BULLET_SPEED 22  // Boosté (était 14)
+#define PLAYER_SPEED 9   
+#define BULLET_SPEED 22  
 #define MAX_PLAYERS 4
 
 #pragma pack(push, 1)
@@ -55,7 +55,8 @@ typedef struct {
     int x;
     int y;
     int hp;
-    int dirY; // Nouvelle variable pour animer le boss
+    int dirY; 
+    Bullet bullet; // Nouvelle variable : la balle du Boss
 } Enemy;
 
 typedef struct {
